@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Log in · Repwise{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Log in</h1>
+    <form method="post">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" value="{{ username or '' }}" autofocus>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password">
+
+        <button type="submit">Log in</button>
+    </form>
+    <p class="muted">New here? <a href="{{ url_for('register') }}">Create an account</a></p>
+</div>
+{% endblock %}

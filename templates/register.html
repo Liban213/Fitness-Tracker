@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Register · Repwise{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Create an account</h1>
+    <form method="post">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" value="{{ username or '' }}" autofocus>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password">
+
+        <button type="submit">Register</button>
+    </form>
+    <p class="muted">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+</div>
+{% endblock %}
