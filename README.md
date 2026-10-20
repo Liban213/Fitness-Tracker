@@ -24,24 +24,31 @@ The SQLite database (`repwise.db`) is created automatically on first run.
 
 ```
 app.py              Routes and database logic (plain sqlite3, no ORM)
-templates/          Jinja2 templates (base, register, login, dashboard)
+templates/          Jinja2 templates (base, auth pages, dashboard, workouts)
 static/style.css    Styling
 requirements.txt    Python dependencies
 ```
 
-## Scope: Sprint 1, Week 3
+## Sprint 1: auth + skeleton (done)
 
-**In scope this week (auth + skeleton):**
 - User registration (passwords hashed with `werkzeug.security`)
 - Login / logout using Flask sessions
 - `login_required` decorator protecting the dashboard
-- Bare dashboard showing "Logged in as {username}"
 - Input validation (no empty username/password) and flash messages
 
-**Out of scope (next week):**
-- Workout plans
-- Exercise logging
-- Anything beyond auth and the bare dashboard
+## Sprint 2: workouts + exercise logging
+
+- New `workouts` table (`id`, `user_id`, `name`, `date`) and `exercises` table
+  (`id`, `workout_id`, `name`, `sets`, `reps`, `weight`), created automatically
+  on startup (existing databases get the new tables too)
+- `GET/POST /workouts/new`: create a workout (name + date)
+- `GET /workouts/<id>`: view a workout and its exercises
+- `POST /workouts/<id>/exercises`: log an exercise (sets, reps, optional weight in kg)
+- Dashboard lists your workouts, newest first, with an exercise count
+- Every query is scoped to the logged-in user; another user's workout returns 404
+- Validation: required names, valid date, sets/reps >= 1, weight >= 0
+
+**Not yet built:** editing or deleting workouts/exercises, progress charts, workout plans/templates.
 
 ## Known TODOs
 

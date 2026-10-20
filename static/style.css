@@ -102,3 +102,87 @@ button:hover {
     background: #fee2e2;
     color: #991b1b;
 }
+
+/* ---------- Sprint 2: workouts ---------- */
+
+.container.wide {
+    max-width: 720px;
+}
+
+.card h2 {
+    margin-top: 2rem;
+    font-size: 1.15rem;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.card-header h1 {
+    margin: 0;
+}
+
+.button {
+    display: inline-block;
+    padding: 0.5rem 0.9rem;
+    border-radius: 4px;
+    background: #2563eb;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.button:hover {
+    background: #1d4ed8;
+}
+
+.workout-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.workout-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.workout-list li a {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 500px) {
+    .row {
+        grid-template-columns: 1fr;
+    }
+}

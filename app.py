@@ -1,7 +1,8 @@
 import sqlite3
+from datetime import date
 from functools import wraps
 
-from flask import Flask, flash, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 DATABASE = "repwise.db"
@@ -29,16 +30,34 @@ def close_db(exception):
 
 
 def init_db():
-    """Create the users table if it doesn't exist yet (runs on startup)."""
+    """Create any missing tables (runs on startup, safe to run repeatedly)."""
     with app.app_context():
         db = get_db()
-        db.execute(
+        db.executescript(
             """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL
-            )
+            );
+
+            -- Each workout belongs to one user.
+            CREATE TABLE IF NOT EXISTS workouts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users (id),
+                name TEXT NOT NULL,
+                date TEXT NOT NULL  -- stored as YYYY-MM-DD
+            );
+
+            -- Each exercise belongs to one workout.
+            CREATE TABLE IF NOT EXISTS exercises (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workout_id INTEGER NOT NULL REFERENCES workouts (id),
+                name TEXT NOT NULL,
+                sets INTEGER NOT NULL,
+                reps INTEGER NOT NULL,
+                weight REAL  -- optional (e.g. bodyweight exercises)
+            );
             """
         )
         db.commit()
@@ -138,7 +157,117 @@ def dashboard():
         # The session points at a user that no longer exists (e.g. DB was reset).
         session.clear()
         return redirect(url_for("login"))
-    return render_template("dashboard.html", username=user["username"])
+
+    # Only ever select workouts belonging to the logged-in user.
+    workouts = get_db().execute(
+        """
+        SELECT workouts.id, workouts.name, workouts.date, COUNT(exercises.id) AS exercise_count
+        FROM workouts
+        LEFT JOIN exercises ON exercises.workout_id = workouts.id
+        WHERE workouts.user_id = ?
+        GROUP BY workouts.id
+        ORDER BY workouts.date DESC, workouts.id DESC
+        """,
+        (session["user_id"],),
+    ).fetchall()
+    return render_template("dashboard.html", username=user["username"], workouts=workouts)
+
+
+# ---------- Workouts ----------
+
+def get_own_workout(workout_id):
+    """Fetch a workout, but only if it belongs to the logged-in user.
+
+    Filtering by user_id as well as id stops someone from viewing another
+    user's workout just by changing the number in the URL.
+    """
+    workout = get_db().execute(
+        "SELECT * FROM workouts WHERE id = ? AND user_id = ?",
+        (workout_id, session["user_id"]),
+    ).fetchone()
+    if workout is None:
+        abort(404)
+    return workout
+
+
+@app.route("/workouts/new", methods=["GET", "POST"])
+@login_required
+def new_workout():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        workout_date = request.form.get("date", "").strip()
+
+        if not name:
+            flash("Workout name is required.", "error")
+            return render_template("new_workout.html", name=name, date=workout_date)
+        try:
+            date.fromisoformat(workout_date)  # validates YYYY-MM-DD
+        except ValueError:
+            flash("Please enter a valid date.", "error")
+            return render_template("new_workout.html", name=name, date=workout_date)
+
+        db = get_db()
+        cursor = db.execute(
+            "INSERT INTO workouts (user_id, name, date) VALUES (?, ?, ?)",
+            (session["user_id"], name, workout_date),
+        )
+        db.commit()
+        flash("Workout created. Now add some exercises.", "success")
+        return redirect(url_for("view_workout", workout_id=cursor.lastrowid))
+
+    return render_template("new_workout.html", date=date.today().isoformat())
+
+
+@app.route("/workouts/<int:workout_id>")
+@login_required
+def view_workout(workout_id):
+    workout = get_own_workout(workout_id)
+    exercises = get_db().execute(
+        "SELECT * FROM exercises WHERE workout_id = ? ORDER BY id", (workout_id,)
+    ).fetchall()
+    return render_template("workout.html", workout=workout, exercises=exercises, form={})
+
+
+@app.route("/workouts/<int:workout_id>/exercises", methods=["POST"])
+@login_required
+def add_exercise(workout_id):
+    workout = get_own_workout(workout_id)  # ownership check before writing
+    form = request.form
+    name = form.get("name", "").strip()
+
+    # Validate input: name required, sets/reps positive whole numbers,
+    # weight optional but must be a non-negative number if given.
+    error = None
+    try:
+        sets = int(form.get("sets", ""))
+        reps = int(form.get("reps", ""))
+        weight_text = form.get("weight", "").strip()
+        weight = float(weight_text) if weight_text else None
+    except ValueError:
+        error = "Sets and reps must be whole numbers, and weight must be a number."
+    else:
+        if not name:
+            error = "Exercise name is required."
+        elif sets < 1 or reps < 1:
+            error = "Sets and reps must be at least 1."
+        elif weight is not None and weight < 0:
+            error = "Weight can't be negative."
+
+    if error:
+        flash(error, "error")
+        exercises = get_db().execute(
+            "SELECT * FROM exercises WHERE workout_id = ? ORDER BY id", (workout_id,)
+        ).fetchall()
+        return render_template("workout.html", workout=workout, exercises=exercises, form=form)
+
+    db = get_db()
+    db.execute(
+        "INSERT INTO exercises (workout_id, name, sets, reps, weight) VALUES (?, ?, ?, ?, ?)",
+        (workout_id, name, sets, reps, weight),
+    )
+    db.commit()
+    flash(f"Added {name}.", "success")
+    return redirect(url_for("view_workout", workout_id=workout_id))
 
 
 init_db()

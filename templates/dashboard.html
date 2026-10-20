@@ -1,9 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · Repwise{% endblock %}
+{% block container_class %}wide{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h1>Dashboard</h1>
+    <div class="card-header">
+        <h1>Dashboard</h1>
+        <a href="{{ url_for('new_workout') }}" class="button">+ New workout</a>
+    </div>
     <p>Logged in as <strong>{{ username }}</strong></p>
+
+    <h2>Your workouts</h2>
+    {% if workouts %}
+        <ul class="workout-list">
+            {% for workout in workouts %}
+                <li>
+                    <a href="{{ url_for('view_workout', workout_id=workout.id) }}">{{ workout.name }}</a>
+                    <span class="muted">{{ workout.date }} · {{ workout.exercise_count }} exercise{{ '' if workout.exercise_count == 1 else 's' }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">No workouts yet. Create your first one!</p>
+    {% endif %}
 </div>
 {% endblock %}
