@@ -1,3 +1,23 @@
+/* ---------- Theme ----------
+   All colours live here so the look can be changed in one place.
+   Orange = energy/accent, charcoal = the "gym floor". */
+
+:root {
+    --charcoal: #18181b;
+    --charcoal-soft: #27272a;
+    --orange: #ea580c;         /* accents, icons, borders */
+    --orange-strong: #c2410c;  /* buttons + links (passes contrast with white text) */
+    --orange-dark: #9a3412;    /* hover */
+    --orange-light: #fb923c;   /* accents on dark backgrounds */
+    --orange-tint: #fff7ed;
+    --bg: #f5f5f4;
+    --surface: #fff;
+    --text: #1c1917;
+    --muted: #57534e;
+    --border: #e7e5e4;
+    --heading-font: "Oswald", "Arial Narrow", Impact, sans-serif;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -5,20 +25,31 @@
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f4f5f7;
-    color: #222;
+    background: var(--bg);
+    color: var(--text);
 }
 
 a {
-    color: #2563eb;
+    color: var(--orange-strong);
 }
+
+h1,
+h2 {
+    font-family: var(--heading-font);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* ---------- Navbar ---------- */
 
 .navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.9rem 1.5rem;
-    background: #1f2937;
+    padding: 0.8rem 1.5rem;
+    background: var(--charcoal);
+    border-bottom: 4px solid var(--orange);
 }
 
 .navbar a {
@@ -27,11 +58,36 @@ a {
     margin-left: 1rem;
 }
 
-.navbar .brand {
-    font-weight: 700;
-    font-size: 1.2rem;
-    margin-left: 0;
+.navbar nav a:hover {
+    color: var(--orange-light);
 }
+
+.navbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0;
+    font-family: var(--heading-font);
+    font-weight: 700;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.brand-icon {
+    display: flex;
+    width: 2rem;
+    color: var(--orange);
+    transform: rotate(-20deg);
+}
+
+.dumbbell {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* ---------- Layout ---------- */
 
 .container {
     max-width: 420px;
@@ -39,17 +95,151 @@ a {
     padding: 0 1rem;
 }
 
+.container.wide {
+    max-width: 760px;
+}
+
 .card {
-    background: #fff;
+    background: var(--surface);
     padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    border-top: 4px solid var(--orange);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card + .card {
+    margin-top: 1.25rem;
 }
 
 .card h1 {
     margin-top: 0;
-    font-size: 1.5rem;
+    font-size: 1.7rem;
 }
+
+.card h2 {
+    margin-top: 2rem;
+    font-size: 1.2rem;
+}
+
+.card h2.section-title {
+    margin-top: 0;
+}
+
+.card-icon {
+    width: 3.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--orange);
+    transform: rotate(-20deg);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.card-header h1 {
+    margin: 0;
+}
+
+.card-header .muted {
+    margin: 0.25rem 0 0;
+}
+
+.muted {
+    margin-bottom: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+/* ---------- Dashboard hero + stats ---------- */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2.25rem 2rem;
+    border-radius: 10px;
+    color: #fff;
+    /* Dark base with faint diagonal stripes, like a rubber gym floor. */
+    background:
+        repeating-linear-gradient(135deg, transparent 0 14px, rgba(255, 255, 255, 0.03) 14px 28px),
+        linear-gradient(135deg, var(--charcoal) 0%, var(--charcoal-soft) 100%);
+}
+
+.hero-text {
+    position: relative;
+    z-index: 1;
+}
+
+.hero h1 {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 2.6rem;
+    line-height: 1;
+}
+
+.hero p {
+    margin: 0 0 1.25rem;
+    color: #d6d3d1;
+}
+
+.hero .eyebrow {
+    margin: 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--orange-light);
+}
+
+.hero .eyebrow strong {
+    color: #fff;
+}
+
+.hero-art {
+    position: absolute;
+    right: -1.5rem;
+    width: 17rem;
+    color: var(--orange);
+    opacity: 0.9;
+    transform: rotate(-25deg);
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.25rem 0;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 1.25rem;
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 4px solid var(--orange);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.stat-number {
+    font-family: var(--heading-font);
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+/* ---------- Forms + buttons ---------- */
 
 label {
     display: block;
@@ -60,137 +250,78 @@ label {
 input {
     width: 100%;
     padding: 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    border: 1px solid #d6d3d1;
+    border-radius: 6px;
     font-size: 1rem;
+}
+
+input:focus {
+    outline: 2px solid var(--orange);
+    outline-offset: 1px;
+    border-color: var(--orange);
 }
 
 button {
     width: 100%;
     margin-top: 1.5rem;
-    padding: 0.7rem;
+    padding: 0.75rem;
     border: none;
-    border-radius: 4px;
-    background: #2563eb;
+    border-radius: 6px;
+    background: var(--orange-strong);
     color: #fff;
-    font-size: 1rem;
+    font-family: var(--heading-font);
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     cursor: pointer;
 }
 
 button:hover {
-    background: #1d4ed8;
-}
-
-.muted {
-    margin-bottom: 0;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.flash {
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: 4px;
-}
-
-.flash-success {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.flash-error {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-/* ---------- Sprint 2: workouts ---------- */
-
-.container.wide {
-    max-width: 720px;
-}
-
-.card h2 {
-    margin-top: 2rem;
-    font-size: 1.15rem;
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-}
-
-.card-header h1 {
-    margin: 0;
+    background: var(--orange-dark);
 }
 
 .button {
     display: inline-block;
-    padding: 0.5rem 0.9rem;
-    border-radius: 4px;
-    background: #2563eb;
+    padding: 0.55rem 1rem;
+    border-radius: 6px;
+    background: var(--orange-strong);
     color: #fff;
+    font-family: var(--heading-font);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     text-decoration: none;
     white-space: nowrap;
 }
 
 .button:hover {
-    background: #1d4ed8;
+    background: var(--orange-dark);
 }
 
-.workout-list {
-    list-style: none;
-    padding: 0;
+/* Undo the full-width form-button styling for small inline buttons. */
+button.button {
+    width: auto;
     margin: 0;
+    font-size: 1rem;
+    line-height: inherit;
 }
 
-.workout-list li {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #eee;
+.button-secondary {
+    background: var(--border);
+    color: var(--text);
 }
 
-.workout-list li a {
-    font-weight: 600;
-    text-decoration: none;
+.button-secondary:hover {
+    background: #d6d3d1;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+.button-danger {
+    background: #b91c1c;
 }
 
-th,
-td {
-    padding: 0.6rem 0.5rem;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-
-th {
-    font-size: 0.85rem;
-    color: #666;
-}
-
-.row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
-}
-
-@media (max-width: 500px) {
-    .row {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ---------- Sprint 3: edit, delete, history ---------- */
-
-.card-header .muted {
-    margin: 0.25rem 0 0;
+.button-danger:hover {
+    background: #991b1b;
 }
 
 .actions {
@@ -203,29 +334,102 @@ th {
     margin: 0;
 }
 
-/* Undo the full-width form-button styling for small inline buttons. */
-button.button {
+.link-button {
     width: auto;
     margin: 0;
-    font-size: 1rem;
-    line-height: inherit;
+    padding: 0;
+    background: none;
+    color: #b91c1c;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
-.button-secondary {
-    background: #e5e7eb;
-    color: #222;
+.link-button:hover {
+    background: none;
+    text-decoration: underline;
 }
 
-.button-secondary:hover {
-    background: #d1d5db;
+/* ---------- Lists + tables ---------- */
+
+.workout-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.button-danger {
-    background: #dc2626;
+.workout-list li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
 }
 
-.button-danger:hover {
-    background: #b91c1c;
+.workout-list li:last-child {
+    border-bottom: none;
+}
+
+.workout-list li a {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.workout-list li a:hover {
+    color: var(--orange-strong);
+}
+
+.date-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 3.2rem;
+    padding: 0.3rem 0;
+    border-radius: 6px;
+    background: var(--orange-tint);
+    color: var(--orange-strong);
+    line-height: 1.1;
+}
+
+.date-day {
+    font-family: var(--heading-font);
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.date-month {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
 }
 
 .row-actions {
@@ -239,31 +443,72 @@ button.button {
     text-decoration: none;
 }
 
-.link-button {
-    width: auto;
-    margin: 0;
-    padding: 0;
-    background: none;
-    color: #dc2626;
-    font-size: inherit;
-}
-
-.link-button:hover {
-    background: none;
-    text-decoration: underline;
-}
-
 .record {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    padding: 1rem;
+    padding: 1rem 1.25rem;
     margin-bottom: 1.5rem;
-    border-radius: 6px;
-    background: #eff6ff;
+    border-radius: 8px;
+    border-left: 4px solid var(--orange);
+    background: var(--orange-tint);
 }
 
 .record strong {
-    font-size: 1.6rem;
-    color: #1d4ed8;
+    font-family: var(--heading-font);
+    font-size: 2rem;
+    color: var(--orange-strong);
+}
+
+/* ---------- Flash messages ---------- */
+
+.flash {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+}
+
+.flash-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.flash-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 560px) {
+    .hero {
+        padding: 1.75rem 1.25rem;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .hero-art {
+        width: 9rem;
+        right: -2.5rem;
+        top: 0.75rem;
+        opacity: 0.35;
+    }
+
+    .stats {
+        gap: 0.5rem;
+    }
+
+    .stat {
+        padding: 0.8rem;
+    }
+
+    .stat-number {
+        font-size: 1.6rem;
+    }
+
+    .row {
+        grid-template-columns: 1fr;
+    }
 }

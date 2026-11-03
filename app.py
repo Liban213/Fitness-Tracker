@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from functools import wraps
 
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
@@ -199,8 +199,24 @@ def dashboard():
         (session["user_id"],),
     ).fetchall()
 
+    # Numbers for the stat tiles at the top of the dashboard.
+    week_start = date.today() - timedelta(days=date.today().weekday())  # this Monday
+    week_end = week_start + timedelta(days=6)
+    stats = {
+        "workouts": len(workouts),
+        "exercises": sum(workout["exercise_count"] for workout in workouts),
+        "this_week": sum(
+            1 for workout in workouts
+            if week_start.isoformat() <= workout["date"] <= week_end.isoformat()
+        ),
+    }
+
     return render_template(
-        "dashboard.html", username=user["username"], workouts=workouts, exercise_names=exercise_names
+        "dashboard.html",
+        username=user["username"],
+        workouts=workouts,
+        exercise_names=exercise_names,
+        stats=stats,
     )
 
 

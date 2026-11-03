@@ -3,29 +3,56 @@
 {% block container_class %}wide{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h1>Dashboard</h1>
+{% set months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] %}
+<section class="hero">
+    <div class="hero-text">
+        <p class="eyebrow">Logged in as <strong>{{ username }}</strong></p>
+        <h1>Ready to train?</h1>
+        <p>Log a session, beat your last numbers.</p>
         <a href="{{ url_for('new_workout') }}" class="button">+ New workout</a>
     </div>
-    <p>Logged in as <strong>{{ username }}</strong></p>
+    <div class="hero-art">{% include "_dumbbell.html" %}</div>
+</section>
 
-    <h2>Your workouts</h2>
+<section class="stats">
+    <div class="stat">
+        <span class="stat-number">{{ stats.workouts }}</span>
+        <span class="stat-label">Workouts</span>
+    </div>
+    <div class="stat">
+        <span class="stat-number">{{ stats.exercises }}</span>
+        <span class="stat-label">Exercises logged</span>
+    </div>
+    <div class="stat">
+        <span class="stat-number">{{ stats.this_week }}</span>
+        <span class="stat-label">This week</span>
+    </div>
+</section>
+
+<div class="card">
+    <h2 class="section-title">Your workouts</h2>
     {% if workouts %}
         <ul class="workout-list">
             {% for workout in workouts %}
                 <li>
+                    {# workout.date is "YYYY-MM-DD", so slice out the day and month. #}
+                    <span class="date-badge">
+                        <span class="date-day">{{ workout.date[8:10] }}</span>
+                        <span class="date-month">{{ months[workout.date[5:7] | int - 1] }}</span>
+                    </span>
                     <a href="{{ url_for('view_workout', workout_id=workout.id) }}">{{ workout.name }}</a>
-                    <span class="muted">{{ workout.date }} · {{ workout.exercise_count }} exercise{{ '' if workout.exercise_count == 1 else 's' }}</span>
+                    <span class="muted">{{ workout.exercise_count }} exercise{{ '' if workout.exercise_count == 1 else 's' }}</span>
                 </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p class="muted">No workouts yet. Create your first one!</p>
+        <p class="muted">No workouts yet. Hit "New workout" to log your first session!</p>
     {% endif %}
+</div>
 
-    {% if exercise_names %}
-        <h2>Exercise history</h2>
+{% if exercise_names %}
+    <div class="card">
+        <h2 class="section-title">Exercise history</h2>
         <ul class="workout-list">
             {% for exercise in exercise_names %}
                 <li>
@@ -34,6 +61,6 @@
                 </li>
             {% endfor %}
         </ul>
-    {% endif %}
-</div>
+    </div>
+{% endif %}
 {% endblock %}
