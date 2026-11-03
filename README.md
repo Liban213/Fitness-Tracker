@@ -18,14 +18,27 @@ python app.py
 
 Then open http://127.0.0.1:5000 in your browser.
 
+To run the automated tests (they use a temporary database, not `repwise.db`):
+
+```bash
+pytest
+```
+
+For anything beyond local development, set a real secret key first:
+
+```bash
+export SECRET_KEY="some-long-random-string"
+```
+
 The SQLite database (`repwise.db`) is created automatically on first run.
 
 ## Project structure
 
 ```
 app.py              Routes and database logic (plain sqlite3, no ORM)
-templates/          Jinja2 templates (base, auth pages, dashboard, workouts)
+templates/          Jinja2 templates (base, auth pages, dashboard, workouts, history)
 static/style.css    Styling
+test_app.py         Automated tests (pytest)
 requirements.txt    Python dependencies
 ```
 
@@ -48,8 +61,21 @@ requirements.txt    Python dependencies
 - Every query is scoped to the logged-in user; another user's workout returns 404
 - Validation: required names, valid date, sets/reps >= 1, weight >= 0
 
-**Not yet built:** editing or deleting workouts/exercises, progress charts, workout plans/templates.
+## Sprint 3: edit, delete + exercise history
 
-## Known TODOs
+- Edit a workout (`/workouts/<id>/edit`) or an exercise (`/exercises/<id>/edit`)
+- Delete a workout (and its exercises) or a single exercise, with a confirmation
+  prompt; deletes are POST-only so visiting a URL can't delete anything
+- Exercise history (`/history?exercise=<name>`): every time you've logged an
+  exercise (case-insensitive), plus your personal record (heaviest weight)
+- Dashboard lists each exercise you've logged with a link to its history
+- Same ownership rules as Sprint 2: other users' workouts/exercises return 404
+- `SECRET_KEY` is read from an environment variable (dev fallback for local use)
+- Weights display without a trailing `.0` (60 instead of 60.0)
+- 39 automated tests in `test_app.py` covering Sprints 1–3
 
-- `app.secret_key` is a hard-coded placeholder; move it to an environment variable.
+**Not yet built:** progress charts, workout plans/templates, account settings.
+
+## Known limitations
+
+- Forms have no CSRF protection yet (Flask-WTF would add this).

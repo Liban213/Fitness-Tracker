@@ -23,5 +23,17 @@
     {% else %}
         <p class="muted">No workouts yet. Create your first one!</p>
     {% endif %}
+
+    {% if exercise_names %}
+        <h2>Exercise history</h2>
+        <ul class="workout-list">
+            {% for exercise in exercise_names %}
+                <li>
+                    <a href="{{ url_for('exercise_history', exercise=exercise.name) }}">{{ exercise.name }}</a>
+                    <span class="muted">logged {{ exercise.times_logged }} time{{ '' if exercise.times_logged == 1 else 's' }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 </div>
 {% endblock %}

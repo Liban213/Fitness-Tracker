@@ -186,3 +186,84 @@ th {
         grid-template-columns: 1fr;
     }
 }
+
+/* ---------- Sprint 3: edit, delete, history ---------- */
+
+.card-header .muted {
+    margin: 0.25rem 0 0;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.actions form,
+.row-actions form {
+    margin: 0;
+}
+
+/* Undo the full-width form-button styling for small inline buttons. */
+button.button {
+    width: auto;
+    margin: 0;
+    font-size: 1rem;
+    line-height: inherit;
+}
+
+.button-secondary {
+    background: #e5e7eb;
+    color: #222;
+}
+
+.button-secondary:hover {
+    background: #d1d5db;
+}
+
+.button-danger {
+    background: #dc2626;
+}
+
+.button-danger:hover {
+    background: #b91c1c;
+}
+
+.row-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    white-space: nowrap;
+}
+
+.row-actions a {
+    text-decoration: none;
+}
+
+.link-button {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    background: none;
+    color: #dc2626;
+    font-size: inherit;
+}
+
+.link-button:hover {
+    background: none;
+    text-decoration: underline;
+}
+
+.record {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 6px;
+    background: #eff6ff;
+}
+
+.record strong {
+    font-size: 1.6rem;
+    color: #1d4ed8;
+}

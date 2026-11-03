@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}New workout · Repwise{% endblock %}
+{# Used for both creating and editing a workout. #}
+{% block title %}{{ heading }} · Repwise{% endblock %}
 
 {% block content %}
 <div class="card">
-    <h1>New workout</h1>
+    <h1>{{ heading }}</h1>
     <form method="post">
         <label for="name">Name</label>
         <input type="text" id="name" name="name" value="{{ name or '' }}" placeholder="e.g. Push day" autofocus>
@@ -11,8 +12,8 @@
         <label for="date">Date</label>
         <input type="date" id="date" name="date" value="{{ date or '' }}">
 
-        <button type="submit">Create workout</button>
+        <button type="submit">{{ button }}</button>
     </form>
-    <p class="muted"><a href="{{ url_for('dashboard') }}">← Back to dashboard</a></p>
+    <p class="muted"><a href="{{ cancel_url }}">← Cancel</a></p>
 </div>
 {% endblock %}

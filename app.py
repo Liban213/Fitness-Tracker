@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from datetime import date
 from functools import wraps
@@ -5,10 +6,11 @@ from functools import wraps
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-DATABASE = "repwise.db"
-
 app = Flask(__name__)
-app.secret_key = "dev-secret-key-change-me"  # TODO: move to an env var
+# Set SECRET_KEY in the environment for any real deployment; the fallback is
+# only for local development.
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
+app.config["DATABASE"] = "repwise.db"
 
 
 # ---------- Database helpers ----------
@@ -16,7 +18,7 @@ app.secret_key = "dev-secret-key-change-me"  # TODO: move to an env var
 def get_db():
     """Open one connection per request and store it on Flask's g object."""
     if "db" not in g:
-        g.db = sqlite3.connect(DATABASE)
+        g.db = sqlite3.connect(app.config["DATABASE"])
         g.db.row_factory = sqlite3.Row  # lets us access columns by name
     return g.db
 
@@ -63,6 +65,17 @@ def init_db():
         db.commit()
 
 
+@app.template_filter("weight")
+def format_weight(value):
+    """Show weights without a pointless ".0" (60.0 -> "60", 22.5 -> "22.5")."""
+    if not value and value != 0:
+        return ""
+    try:
+        return f"{float(value):.2f}".rstrip("0").rstrip(".")
+    except ValueError:
+        return value  # not a number (e.g. bad form input) - show it as typed
+
+
 # ---------- Auth helpers ----------
 
 def login_required(view):
@@ -80,7 +93,7 @@ def login_required(view):
     return wrapped_view
 
 
-# ---------- Routes ----------
+# ---------- Auth routes ----------
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -150,7 +163,8 @@ def logout():
 @app.route("/")
 @login_required
 def dashboard():
-    user = get_db().execute(
+    db = get_db()
+    user = db.execute(
         "SELECT username FROM users WHERE id = ?", (session["user_id"],)
     ).fetchone()
     if user is None:
@@ -159,7 +173,7 @@ def dashboard():
         return redirect(url_for("login"))
 
     # Only ever select workouts belonging to the logged-in user.
-    workouts = get_db().execute(
+    workouts = db.execute(
         """
         SELECT workouts.id, workouts.name, workouts.date, COUNT(exercises.id) AS exercise_count
         FROM workouts
@@ -170,10 +184,27 @@ def dashboard():
         """,
         (session["user_id"],),
     ).fetchall()
-    return render_template("dashboard.html", username=user["username"], workouts=workouts)
+
+    # Every distinct exercise this user has logged, for the history links.
+    # Grouping by LOWER(name) treats "Bench press" and "bench press" as one.
+    exercise_names = db.execute(
+        """
+        SELECT MIN(exercises.name) AS name, COUNT(*) AS times_logged
+        FROM exercises
+        JOIN workouts ON workouts.id = exercises.workout_id
+        WHERE workouts.user_id = ?
+        GROUP BY LOWER(exercises.name)
+        ORDER BY LOWER(exercises.name)
+        """,
+        (session["user_id"],),
+    ).fetchall()
+
+    return render_template(
+        "dashboard.html", username=user["username"], workouts=workouts, exercise_names=exercise_names
+    )
 
 
-# ---------- Workouts ----------
+# ---------- Ownership + validation helpers ----------
 
 def get_own_workout(workout_id):
     """Fetch a workout, but only if it belongs to the logged-in user.
@@ -190,21 +221,82 @@ def get_own_workout(workout_id):
     return workout
 
 
+def get_own_exercise(exercise_id):
+    """Fetch an exercise, but only if its workout belongs to the logged-in user.
+
+    Exercises don't store a user_id themselves, so we join to their workout
+    to check who owns them.
+    """
+    exercise = get_db().execute(
+        """
+        SELECT exercises.*
+        FROM exercises
+        JOIN workouts ON workouts.id = exercises.workout_id
+        WHERE exercises.id = ? AND workouts.user_id = ?
+        """,
+        (exercise_id, session["user_id"]),
+    ).fetchone()
+    if exercise is None:
+        abort(404)
+    return exercise
+
+
+def get_exercises(workout_id):
+    return get_db().execute(
+        "SELECT * FROM exercises WHERE workout_id = ? ORDER BY id", (workout_id,)
+    ).fetchall()
+
+
+def validate_workout(form):
+    """Check a submitted workout form. Returns (error, name, date)."""
+    name = form.get("name", "").strip()
+    workout_date = form.get("date", "").strip()
+
+    if not name:
+        return "Workout name is required.", name, workout_date
+    try:
+        date.fromisoformat(workout_date)  # validates YYYY-MM-DD
+    except ValueError:
+        return "Please enter a valid date.", name, workout_date
+    return None, name, workout_date
+
+
+def validate_exercise(form):
+    """Check a submitted exercise form. Returns (error, values).
+
+    Rules: name required, sets/reps whole numbers >= 1, weight optional
+    but must be a non-negative number if given.
+    """
+    name = form.get("name", "").strip()
+    try:
+        sets = int(form.get("sets", ""))
+        reps = int(form.get("reps", ""))
+        weight_text = form.get("weight", "").strip()
+        weight = float(weight_text) if weight_text else None
+    except ValueError:
+        return "Sets and reps must be whole numbers, and weight must be a number.", None
+
+    if not name:
+        return "Exercise name is required.", None
+    if sets < 1 or reps < 1:
+        return "Sets and reps must be at least 1.", None
+    if weight is not None and weight < 0:
+        return "Weight can't be negative.", None
+    return None, {"name": name, "sets": sets, "reps": reps, "weight": weight}
+
+
+# ---------- Workout routes ----------
+
 @app.route("/workouts/new", methods=["GET", "POST"])
 @login_required
 def new_workout():
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        workout_date = request.form.get("date", "").strip()
+    form_page = {"heading": "New workout", "button": "Create workout", "cancel_url": url_for("dashboard")}
 
-        if not name:
-            flash("Workout name is required.", "error")
-            return render_template("new_workout.html", name=name, date=workout_date)
-        try:
-            date.fromisoformat(workout_date)  # validates YYYY-MM-DD
-        except ValueError:
-            flash("Please enter a valid date.", "error")
-            return render_template("new_workout.html", name=name, date=workout_date)
+    if request.method == "POST":
+        error, name, workout_date = validate_workout(request.form)
+        if error:
+            flash(error, "error")
+            return render_template("workout_form.html", name=name, date=workout_date, **form_page)
 
         db = get_db()
         cursor = db.execute(
@@ -215,59 +307,141 @@ def new_workout():
         flash("Workout created. Now add some exercises.", "success")
         return redirect(url_for("view_workout", workout_id=cursor.lastrowid))
 
-    return render_template("new_workout.html", date=date.today().isoformat())
+    return render_template("workout_form.html", date=date.today().isoformat(), **form_page)
 
 
 @app.route("/workouts/<int:workout_id>")
 @login_required
 def view_workout(workout_id):
     workout = get_own_workout(workout_id)
-    exercises = get_db().execute(
-        "SELECT * FROM exercises WHERE workout_id = ? ORDER BY id", (workout_id,)
-    ).fetchall()
-    return render_template("workout.html", workout=workout, exercises=exercises, form={})
+    return render_template("workout.html", workout=workout, exercises=get_exercises(workout_id), form={})
 
+
+@app.route("/workouts/<int:workout_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_workout(workout_id):
+    workout = get_own_workout(workout_id)  # ownership check before showing or saving
+    form_page = {
+        "heading": "Edit workout",
+        "button": "Save changes",
+        "cancel_url": url_for("view_workout", workout_id=workout_id),
+    }
+
+    if request.method == "POST":
+        error, name, workout_date = validate_workout(request.form)
+        if error:
+            flash(error, "error")
+            return render_template("workout_form.html", name=name, date=workout_date, **form_page)
+
+        db = get_db()
+        db.execute(
+            "UPDATE workouts SET name = ?, date = ? WHERE id = ?", (name, workout_date, workout_id)
+        )
+        db.commit()
+        flash("Workout updated.", "success")
+        return redirect(url_for("view_workout", workout_id=workout_id))
+
+    return render_template("workout_form.html", name=workout["name"], date=workout["date"], **form_page)
+
+
+# Deleting uses POST (a form button), never GET (a plain link), so a workout
+# can't be deleted just by someone visiting or prefetching a URL.
+@app.route("/workouts/<int:workout_id>/delete", methods=["POST"])
+@login_required
+def delete_workout(workout_id):
+    workout = get_own_workout(workout_id)
+    db = get_db()
+    # Delete the workout's exercises first so none are left pointing at a
+    # workout that no longer exists. Both deletes are committed together.
+    db.execute("DELETE FROM exercises WHERE workout_id = ?", (workout_id,))
+    db.execute("DELETE FROM workouts WHERE id = ?", (workout_id,))
+    db.commit()
+    flash(f"Deleted {workout['name']}.", "success")
+    return redirect(url_for("dashboard"))
+
+
+# ---------- Exercise routes ----------
 
 @app.route("/workouts/<int:workout_id>/exercises", methods=["POST"])
 @login_required
 def add_exercise(workout_id):
     workout = get_own_workout(workout_id)  # ownership check before writing
-    form = request.form
-    name = form.get("name", "").strip()
-
-    # Validate input: name required, sets/reps positive whole numbers,
-    # weight optional but must be a non-negative number if given.
-    error = None
-    try:
-        sets = int(form.get("sets", ""))
-        reps = int(form.get("reps", ""))
-        weight_text = form.get("weight", "").strip()
-        weight = float(weight_text) if weight_text else None
-    except ValueError:
-        error = "Sets and reps must be whole numbers, and weight must be a number."
-    else:
-        if not name:
-            error = "Exercise name is required."
-        elif sets < 1 or reps < 1:
-            error = "Sets and reps must be at least 1."
-        elif weight is not None and weight < 0:
-            error = "Weight can't be negative."
-
+    error, values = validate_exercise(request.form)
     if error:
         flash(error, "error")
-        exercises = get_db().execute(
-            "SELECT * FROM exercises WHERE workout_id = ? ORDER BY id", (workout_id,)
-        ).fetchall()
-        return render_template("workout.html", workout=workout, exercises=exercises, form=form)
+        return render_template(
+            "workout.html", workout=workout, exercises=get_exercises(workout_id), form=request.form
+        )
 
     db = get_db()
     db.execute(
         "INSERT INTO exercises (workout_id, name, sets, reps, weight) VALUES (?, ?, ?, ?, ?)",
-        (workout_id, name, sets, reps, weight),
+        (workout_id, values["name"], values["sets"], values["reps"], values["weight"]),
     )
     db.commit()
-    flash(f"Added {name}.", "success")
+    flash(f"Added {values['name']}.", "success")
     return redirect(url_for("view_workout", workout_id=workout_id))
+
+
+@app.route("/exercises/<int:exercise_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_exercise(exercise_id):
+    exercise = get_own_exercise(exercise_id)
+
+    if request.method == "POST":
+        error, values = validate_exercise(request.form)
+        if error:
+            flash(error, "error")
+            return render_template("exercise_form.html", exercise=exercise, form=request.form)
+
+        db = get_db()
+        db.execute(
+            "UPDATE exercises SET name = ?, sets = ?, reps = ?, weight = ? WHERE id = ?",
+            (values["name"], values["sets"], values["reps"], values["weight"], exercise_id),
+        )
+        db.commit()
+        flash("Exercise updated.", "success")
+        return redirect(url_for("view_workout", workout_id=exercise["workout_id"]))
+
+    return render_template("exercise_form.html", exercise=exercise, form=exercise)
+
+
+@app.route("/exercises/<int:exercise_id>/delete", methods=["POST"])
+@login_required
+def delete_exercise(exercise_id):
+    exercise = get_own_exercise(exercise_id)
+    db = get_db()
+    db.execute("DELETE FROM exercises WHERE id = ?", (exercise_id,))
+    db.commit()
+    flash(f"Deleted {exercise['name']}.", "success")
+    return redirect(url_for("view_workout", workout_id=exercise["workout_id"]))
+
+
+@app.route("/history")
+@login_required
+def exercise_history():
+    """Every time the user has logged one exercise, plus their best weight."""
+    name = request.args.get("exercise", "").strip()
+    if not name:
+        return redirect(url_for("dashboard"))
+
+    # Match names case-insensitively, and only within this user's workouts.
+    entries = get_db().execute(
+        """
+        SELECT exercises.*, workouts.name AS workout_name, workouts.date
+        FROM exercises
+        JOIN workouts ON workouts.id = exercises.workout_id
+        WHERE workouts.user_id = ? AND LOWER(exercises.name) = LOWER(?)
+        ORDER BY workouts.date DESC, exercises.id DESC
+        """,
+        (session["user_id"], name),
+    ).fetchall()
+
+    # Personal record = the heaviest weight logged (bodyweight entries skipped).
+    weighted = [entry for entry in entries if entry["weight"] is not None]
+    record = max(weighted, key=lambda entry: entry["weight"]) if weighted else None
+
+    return render_template("history.html", name=name, entries=entries, record=record)
 
 
 init_db()
